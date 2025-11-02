@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "455389511965",
+    "project_id": "mymedimap",
+    "storage_bucket": "mymedimap.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:455389511965:android:3494044d94d2625632e1f4",
+        "android_client_info": {
+          "package_name": "com.example.mymedimap"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjSxr8zNL9gU55pXgj_vTpgiaXoTigREQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

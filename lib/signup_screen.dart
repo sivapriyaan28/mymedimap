@@ -1,59 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_page.dart';
-import 'signup_screen.dart'; // 👈 Import signup screen
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'login_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({Key? key}) : super(key: key);
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignUpScreenState extends State<SignUpScreen> {
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
+
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
-  // 🔹 Login using Firebase Authentication
-  Future<void> _login() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter both email and password.")),
-      );
-      return;
-    }
-
+  Future<void> _signUp() async {
     setState(() => _isLoading = true);
 
     try {
-      // 🔹 Sign in with Firebase
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
+      // Create a new user in Firebase Authentication
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
 
-      // ✅ Navigate to Home Page
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
-      }
+      final user = userCredential.user;
+
+      // Store username and email in Firestore
+      await _firestore.collection('users').doc(user!.uid).set({
+        'username': _usernameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'createdAt': Timestamp.now(),
+      });
+
+      // Success → Navigate to Login Screen
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ Account created successfully!")),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
     } on FirebaseAuthException catch (e) {
-      String message = "Login failed. Please try again.";
-
-      if (e.code == 'user-not-found') {
-        message = "No user found with this email.";
-      } else if (e.code == 'wrong-password') {
-        message = "Incorrect password.";
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ Error: ${e.message}")),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
@@ -83,28 +82,29 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircleAvatar(
-                      radius: 40,
-                      backgroundImage: AssetImage('assets/mymedimap_logo.png'),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "MyMediMap Login",
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    const Text(
+                      "Create Account",
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Access your health records securely",
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[700],
+                        fontSize: 24,
                       ),
                     ),
                     const SizedBox(height: 24),
 
-                    // 🔹 Email Field
+                    // Username field
+                    TextField(
+                      controller: _usernameController,
+                      decoration: InputDecoration(
+                        labelText: "Username",
+                        prefixIcon: const Icon(Icons.person),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Email field
                     TextField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -118,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // 🔹 Password Field
+                    // Password field
                     TextField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -144,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // 🔹 Login Button
+                    // Sign up button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -155,11 +155,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: _isLoading ? null : _login,
+                        onPressed: _isLoading ? null : _signUp,
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
+                            ? const CircularProgressIndicator(
+                          color: Colors.white,
+                        )
                             : const Text(
-                          "Login",
+                          "Sign Up",
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.white,
@@ -169,22 +171,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // 🔹 Signup Link
+                    // Login redirect
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("Don't have an account?"),
+                        const Text("Already have an account?"),
                         TextButton(
                           onPressed: () {
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const SignUpScreen(),
-                              ),
+                                  builder: (_) => const LoginScreen()),
                             );
                           },
                           child: const Text(
-                            "Sign up",
+                            "Login",
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
